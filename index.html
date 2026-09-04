@@ -32,15 +32,15 @@
                 <div>
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-xs font-medium text-slate-600">Current Balance:</label>
-                        <input type="number" id="p1_init_num" value="0" min="0" max="50000000" step="1000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncInputToSlider('p1_init', this.value)">
+                        <input type="text" id="p1_init_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncTextToSliderAndModel('p1_init', this.value, updatePhase1)">
                     </div>
-                    <input type="range" id="p1_init" min="0" max="4000000" step="10000" value="0" class="w-full accent-blue-600" oninput="syncSliderToInput('p1_init_num', this.value); updatePhase1();">
+                    <input type="range" id="p1_init" min="0" max="2000000" step="10000" value="0" class="w-full accent-blue-600" oninput="syncSliderToText('p1_init_num', this.value); updatePhase1();">
                 </div>
 
                 <div>
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-xs font-medium text-slate-600">Annual Contribution:</label>
-                        <input type="number" id="p1_contrib_annual_num" value="0" min="0" max="1200000" step="1000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncAnnualContribution(this.value)">
+                        <input type="text" id="p1_contrib_annual_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncAnnualContribution(parseCurrencyString(this.value))">
                     </div>
                     <input type="range" id="p1_contrib_annual" min="0" max="100000" step="5000" value="0" class="w-full accent-blue-600" oninput="syncAnnualContributionFromSlider(this.value)">
                 </div>
@@ -48,7 +48,7 @@
                 <div>
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-xs font-medium text-slate-600">Monthly Contribution:</label>
-                        <input type="number" id="p1_contrib_monthly_num" value="0" min="0" max="100000" step="100" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncMonthlyContribution(this.value)">
+                        <input type="text" id="p1_contrib_monthly_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncMonthlyContribution(parseCurrencyString(this.value))">
                     </div>
                     <input type="range" id="p1_contrib_monthly" min="0" max="10000" step="500" value="0" class="w-full accent-blue-600" oninput="syncMonthlyContributionFromSlider(this.value)">
                 </div>
@@ -64,7 +64,11 @@
                 </div>
             </div>
 
-            <div class="lg:col-span-2 flex items-center">
+            <div class="lg:col-span-2 flex flex-col justify-center space-y-2">
+                <div>
+                    <h3 class="text-md font-semibold text-slate-800">Portfolio Growth Projection</h3>
+                    <p class="text-xs text-slate-500">Tracks how your savings accumulate over time through contributions and compound interest leading up to retirement.</p>
+                </div>
                 <div class="w-full h-80">
                     <canvas id="chartPhase1"></canvas>
                 </div>
@@ -84,9 +88,9 @@
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-xs font-medium text-slate-600">Starting Nest Egg:</label>
-                            <input type="number" id="p2_init_num" value="2140000" min="0" max="50000000" step="10000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncInputToSlider('p2_init', this.value); updateStartingNestEggDefaults();">
+                            <input type="text" id="p2_init_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncTextToSliderAndModel('p2_init', this.value, () => { updateStartingNestEggDefaults(); updatePhase2(); })">
                         </div>
-                        <input type="range" id="p2_init" min="0" max="10000000" step="10000" value="2140000" class="w-full accent-emerald-600" oninput="syncSliderToInput('p2_init_num', this.value); updateStartingNestEggDefaults(); updatePhase2();">
+                        <input type="range" id="p2_init" min="0" max="5000000" step="10000" value="0" class="w-full accent-emerald-600" oninput="syncSliderToText('p2_init_num', this.value); updateStartingNestEggDefaults(); updatePhase2();">
                     </div>
 
                     <div>
@@ -95,10 +99,10 @@
                     </div>
                     <div>
                         <div class="flex justify-between items-center mb-1">
-                            <label class="text-xs font-medium text-slate-600">Target Gross Anunual Withdrawal:</label>
-                            <input type="number" id="p2_spend_num" value="107000" min="0" max="1000000" step="1000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncInputToSlider('p2_spend', this.value)">
+                            <label class="text-xs font-medium text-slate-600">Target Gross Annual Withdrawal (Today's $):</label>
+                            <input type="text" id="p2_spend_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncTextToSliderAndModel('p2_spend', this.value, updatePhase2)">
                         </div>
-                        <input type="range" id="p2_spend" min="0" max="250000" step="1000" value="107000" class="w-full accent-emerald-600" oninput="syncSliderToInput('p2_spend_num', this.value); updatePhase2();">
+                        <input type="range" id="p2_spend" min="0" max="250000" step="1000" value="0" class="w-full accent-emerald-600" oninput="syncSliderToText('p2_spend_num', this.value); updatePhase2();">
                     </div>
                     <div>
                         <label class="text-xs font-medium text-slate-600 block">Expected Portfolio Return in Retirement (%): <span id="p2_rate_val" class="font-bold text-slate-900"></span></label>
@@ -123,7 +127,7 @@
                         <div>
                             <div class="flex justify-between items-center mb-1">
                                 <label class="text-xs font-medium text-slate-600">Monthly Pension Amount:</label>
-                                <input type="number" id="emp_pens_monthly_num" value="0" min="0" max="20000" step="100" class="w-28 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncEmpPensionMonthly(this.value)">
+                                <input type="text" id="emp_pens_monthly_num" value="$0" class="w-28 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncEmpPensionMonthly(parseCurrencyString(this.value))">
                             </div>
                             <input type="range" id="emp_pens_monthly" min="0" max="10000" step="250" value="0" class="w-full accent-emerald-600" oninput="syncEmpPensionMonthlyFromSlider(this.value)">
                         </div>
@@ -154,7 +158,11 @@
                     </div>
                 </div>
 
-                <div class="lg:col-span-2 flex items-center">
+                <div class="lg:col-span-2 flex flex-col justify-center space-y-2">
+                    <div>
+                        <h3 class="text-md font-semibold text-slate-800">Savings Portfolio Balance Trajectory</h3>
+                        <p class="text-xs text-slate-500">Tracks how your total invested savings nest egg changes over time (does not show spending/cash flow).</p>
+                    </div>
                     <div class="w-full h-80">
                         <canvas id="chartPhase2"></canvas>
                     </div>
@@ -164,8 +172,8 @@
             <div class="pt-6 border-t border-slate-200 space-y-4">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <div>
-                        <h3 class="text-md font-semibold text-slate-800">Year-by-Year Retirement Ledger</h3>
-                        <p class="text-xs text-slate-500">Track portfolio growth, net withdrawals, taxes, and after-tax cash flows across your timeline.</p>
+                        <h3 class="text-md font-semibold text-slate-800">Year-by-Year Retirement Spending & Cash Flow Ledger</h3>
+                        <p class="text-xs text-slate-500">Detailed breakdown of your annual spending, net portfolio withdrawals, taxes, and after-tax cash flows across your timeline.</p>
                     </div>
                     <div class="w-full sm:w-64">
                         <label class="text-xs font-medium text-slate-700 block mb-1">Expected Effective Tax Rate: <span id="ledger_tax_val" class="font-bold text-slate-900">20%</span></label>
@@ -197,41 +205,56 @@
 
     <script>
         const fmtCurrency = (val) => '$' + Math.round(val).toLocaleString();
+        
+        function parseCurrencyString(str) {
+            if (typeof str === 'number') return str;
+            if (!str) return 0;
+            const cleaned = str.toString().replace(/[^0-9.-]+/g, "");
+            return parseFloat(cleaned) || 0;
+        }
+
+        function formatCurrencyInput(inputElem) {
+            const val = parseCurrencyString(inputElem.value);
+            inputElem.value = '$' + Math.round(val).toLocaleString();
+        }
+
+        function unformatCurrencyInput(inputElem) {
+            const val = parseCurrencyString(inputElem.value);
+            inputElem.value = val === 0 ? '' : Math.round(val);
+        }
 
         let chart1, chart2;
         let isStressTestActive = false;
 
-        function syncInputToSlider(sliderId, val) {
+        function syncTextToSliderAndModel(sliderId, valStr, updateCallback) {
+            const val = parseCurrencyString(valStr);
             const slider = document.getElementById(sliderId);
             if (slider) {
-                if (parseFloat(val) > parseFloat(slider.max)) {
-                    slider.max = parseFloat(val) * 2;
+                if (val > parseFloat(slider.max)) {
+                    slider.max = val * 2;
                 }
                 slider.value = val;
-                if (sliderId === 'p1_init') updatePhase1();
-                if (sliderId === 'p2_init') {
-                    updateStartingNestEggDefaults();
-                    updatePhase2();
-                }
-                if (sliderId === 'p2_spend') updatePhase2();
             }
+            if (updateCallback) updateCallback();
         }
 
-        function syncSliderToInput(numInputId, val) {
+        function syncSliderToText(numInputId, val) {
             const numInput = document.getElementById(numInputId);
-            if (numInput) {
-                numInput.value = val;
+            if (numInput && document.activeElement !== numInput) {
+                numInput.value = '$' + Math.round(val).toLocaleString();
             }
         }
 
         function updateStartingNestEggDefaults() {
             const initNum = document.getElementById('p2_init_num');
-            const initialVal = parseFloat(initNum.value) || 0;
+            const initialVal = parseCurrencyString(initNum.value);
             const targetSpend = Math.round(initialVal * 0.05);
 
             const spendNum = document.getElementById('p2_spend_num');
             const spendSlider = document.getElementById('p2_spend');
-            if (spendNum) spendNum.value = targetSpend;
+            if (spendNum && document.activeElement !== spendNum) {
+                spendNum.value = '$' + Math.round(targetSpend).toLocaleString();
+            }
             if (spendSlider) {
                 if (targetSpend > parseFloat(spendSlider.max)) {
                     spendSlider.max = targetSpend * 2;
@@ -240,8 +263,7 @@
             }
         }
 
-        function syncAnnualContribution(val) {
-            const annual = parseFloat(val) || 0;
+        function syncAnnualContribution(annual) {
             const monthly = Math.round(annual / 12);
 
             const annualSlider = document.getElementById('p1_contrib_annual');
@@ -252,7 +274,7 @@
 
             const monthlyNum = document.getElementById('p1_contrib_monthly_num');
             const monthlySlider = document.getElementById('p1_contrib_monthly');
-            if (monthlyNum) monthlyNum.value = monthly;
+            if (monthlyNum && document.activeElement !== monthlyNum) monthlyNum.value = '$' + Math.round(monthly).toLocaleString();
             if (monthlySlider) {
                 if (monthly > parseFloat(monthlySlider.max)) monthlySlider.max = monthly * 2;
                 monthlySlider.value = monthly;
@@ -261,12 +283,14 @@
         }
 
         function syncAnnualContributionFromSlider(val) {
-            syncSliderToInput('p1_contrib_annual_num', val);
+            const annualNum = document.getElementById('p1_contrib_annual_num');
+            if (annualNum && document.activeElement !== annualNum) {
+                annualNum.value = '$' + Math.round(val).toLocaleString();
+            }
             syncAnnualContribution(val);
         }
 
-        function syncMonthlyContribution(val) {
-            const monthly = parseFloat(val) || 0;
+        function syncMonthlyContribution(monthly) {
             const annual = Math.round(monthly * 12);
 
             const monthlySlider = document.getElementById('p1_contrib_monthly');
@@ -277,7 +301,7 @@
 
             const annualNum = document.getElementById('p1_contrib_annual_num');
             const annualSlider = document.getElementById('p1_contrib_annual');
-            if (annualNum) annualNum.value = annual;
+            if (annualNum && document.activeElement !== annualNum) annualNum.value = '$' + Math.round(annual).toLocaleString();
             if (annualSlider) {
                 if (annual > parseFloat(annualSlider.max)) annualSlider.max = annual * 2;
                 annualSlider.value = annual;
@@ -286,12 +310,14 @@
         }
 
         function syncMonthlyContributionFromSlider(val) {
-            syncSliderToInput('p1_contrib_monthly_num', val);
+            const monthlyNum = document.getElementById('p1_contrib_monthly_num');
+            if (monthlyNum && document.activeElement !== monthlyNum) {
+                monthlyNum.value = '$' + Math.round(val).toLocaleString();
+            }
             syncMonthlyContribution(val);
         }
 
-        function syncEmpPensionMonthly(val) {
-            const monthly = parseFloat(val) || 0;
+        function syncEmpPensionMonthly(monthly) {
             const slider = document.getElementById('emp_pens_monthly');
             if (slider) {
                 if (monthly > parseFloat(slider.max)) slider.max = monthly * 2;
@@ -301,7 +327,10 @@
         }
 
         function syncEmpPensionMonthlyFromSlider(val) {
-            syncSliderToInput('emp_pens_monthly_num', val);
+            const monthlyNum = document.getElementById('emp_pens_monthly_num');
+            if (monthlyNum && document.activeElement !== monthlyNum) {
+                monthlyNum.value = '$' + Math.round(val).toLocaleString();
+            }
             syncEmpPensionMonthly(val);
         }
 
@@ -333,19 +362,23 @@
 
         function initCharts() {
             renderCrashYearInputs();
+            
+            document.getElementById('p1_init').value = parseCurrencyString(document.getElementById('p1_init_num').value);
+            document.getElementById('p2_init').value = parseCurrencyString(document.getElementById('p2_init_num').value);
+
             updateStartingNestEggDefaults();
 
             const ctx1 = document.getElementById('chartPhase1').getContext('2d');
             chart1 = new Chart(ctx1, {
                 type: 'line',
-                data: { labels: [], datasets: [{ label: 'Projected Nest Egg', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.1 }] },
+                data: { labels: [], datasets: [{ label: 'Portfolio Growth Projection (Nominal $)', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.1 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
 
             const ctx2 = document.getElementById('chartPhase2').getContext('2d');
             chart2 = new Chart(ctx2, {
                 type: 'line',
-                data: { labels: [], datasets: [{ label: 'Remaining Balance (Nominal $)', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.1 }] },
+                data: { labels: [], datasets: [{ label: 'Savings Portfolio Balance (Nominal $)', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.1 }] },
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false, 
@@ -382,11 +415,10 @@
             const retireAge = parseFloat(document.getElementById('p1_retire_age').value) || 65;
             const totalYears = Math.max(0.1, retireAge - currentAge);
 
-            const numInput = document.getElementById('p1_init_num');
-            const initial = parseFloat(numInput.value) || 0;
-            syncSliderToInput('p1_init', initial);
+            const initial = parseCurrencyString(document.getElementById('p1_init_num').value);
+            document.getElementById('p1_init').value = initial;
 
-            const annualContrib = parseFloat(document.getElementById('p1_contrib_annual_num').value) || 0;
+            const annualContrib = parseCurrencyString(document.getElementById('p1_contrib_annual_num').value);
             const rate = parseFloat(document.getElementById('p1_rate').value) / 100;
 
             document.getElementById('p1_rate_val').innerText = (rate * 100).toFixed(1) + '%';
@@ -417,10 +449,11 @@
             const finalBalance = data[data.length - 1];
             document.getElementById('p1_result').innerText = fmtCurrency(finalBalance);
             
-            if(document.activeElement.id !== 'p2_init' && document.activeElement.id !== 'p2_init_num') {
-                document.getElementById('p2_init').value = finalBalance;
-                document.getElementById('p2_init_num').value = finalBalance;
+            const p2InitInput = document.getElementById('p2_init_num');
+            if(document.activeElement !== p2InitInput) {
+                p2InitInput.value = fmtCurrency(finalBalance);
                 const p2Slider = document.getElementById('p2_init');
+                p2Slider.value = finalBalance;
                 if (finalBalance > parseFloat(p2Slider.max)) {
                     p2Slider.max = finalBalance * 2;
                 }
@@ -439,13 +472,11 @@
             const endAge = parseFloat(document.getElementById('p2_end_age').value) || 90;
             const totalRetireYears = Math.max(0.1, endAge - retireAge);
 
-            const numInput = document.getElementById('p2_init_num');
-            const initial = parseFloat(numInput.value) || 0;
-            syncSliderToInput('p2_init', initial);
+            const initial = parseCurrencyString(document.getElementById('p2_init_num').value);
+            document.getElementById('p2_init').value = initial;
 
-            const spendNumInput = document.getElementById('p2_spend_num');
-            const baseGrossWithdrawal = parseFloat(spendNumInput.value) || 0;
-            syncSliderToInput('p2_spend', baseGrossWithdrawal);
+            const baseGrossWithdrawal = parseCurrencyString(document.getElementById('p2_spend_num').value);
+            document.getElementById('p2_spend').value = baseGrossWithdrawal;
 
             const taxRate = parseFloat(document.getElementById('ledger_tax').value) / 100;
             const rate = parseFloat(document.getElementById('p2_rate').value) / 100;
@@ -454,7 +485,7 @@
             const socSecPension = parseFloat(document.getElementById('p2_pens').value);
             const socSecDelay = parseFloat(document.getElementById('p2_delay').value);
 
-            const empPensMonthly = parseFloat(document.getElementById('emp_pens_monthly_num').value) || 0;
+            const empPensMonthly = parseCurrencyString(document.getElementById('emp_pens_monthly_num').value);
             const empPensAnnualBase = empPensMonthly * 12;
             const isEmpPensIndexed = document.getElementById('emp_pens_indexed').checked;
             
