@@ -95,7 +95,7 @@
                     </div>
                     <div>
                         <div class="flex justify-between items-center mb-1">
-                            <label class="text-xs font-medium text-slate-600">Target Gross Withdrawal (Today's $):</label>
+                            <label class="text-xs font-medium text-slate-600">Target Gross Anunual Withdrawal:</label>
                             <input type="number" id="p2_spend_num" value="107000" min="0" max="1000000" step="1000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncInputToSlider('p2_spend', this.value)">
                         </div>
                         <input type="range" id="p2_spend" min="0" max="250000" step="1000" value="107000" class="w-full accent-emerald-600" oninput="syncSliderToInput('p2_spend_num', this.value); updatePhase2();">
