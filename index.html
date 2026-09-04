@@ -533,9 +533,15 @@
                 }
 
                 let portfolioGrowth = startBalance * currentReturn;
-                let taxesOwed = grossWithdrawalFromPortfolio * taxRate;
-                let netSpendFromPortfolio = grossWithdrawalFromPortfolio - taxesOwed;
-                let totalAfterTaxAnnualSpend = netSpendFromPortfolio + totalCombinedPension;
+                
+                // Effective tax rate now applies to total taxable income (both portfolio withdrawals and pensions)
+                let totalTaxableIncome = grossWithdrawalFromPortfolio + totalCombinedPension;
+                let taxesOwed = totalTaxableIncome * taxRate;
+                
+                let netSpendFromPortfolio = grossWithdrawalFromPortfolio - (grossWithdrawalFromPortfolio * taxRate);
+                let netPension = totalCombinedPension - (totalCombinedPension * taxRate);
+                
+                let totalAfterTaxAnnualSpend = netSpendFromPortfolio + netPension;
                 let afterTaxMonthlySpend = totalAfterTaxAnnualSpend / 12;
 
                 let endBalance = Math.max(0, startBalance + portfolioGrowth - grossWithdrawalFromPortfolio);
