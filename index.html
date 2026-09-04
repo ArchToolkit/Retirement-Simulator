@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexible Two-Phase Retirement Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-6">
+
+    <div class="max-w-6xl mx-auto space-y-8">
+        <header class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h1 class="text-2xl font-bold text-slate-900">Flexible Two-Phase Retirement Trajectory Simulator</h1>
+        </header>
+
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="space-y-4">
+                <h2 class="text-lg font-semibold text-slate-800">Phase 1: Accumulation</h2>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 block mb-1">Current Age:</label>
+                        <input type="number" id="p1_current_age" value="18" min="18" max="80" step="0.25" class="w-full text-xs p-2 border border-slate-300 rounded-xl font-bold text-slate-900" oninput="updatePhase1()">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 block mb-1">Retirement Age:</label>
+                        <input type="number" id="p1_retire_age" value="65" min="40" max="90" step="0.25" class="w-full text-xs p-2 border border-slate-300 rounded-xl font-bold text-slate-900" oninput="updatePhase1()">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-medium text-slate-600">Current Balance:</label>
+                        <input type="number" id="p1_init_num" value="0" min="0" max="50000000" step="1000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncInputToSlider('p1_init', this.value)">
+                    </div>
+                    <input type="range" id="p1_init" min="0" max="4000000" step="10000" value="0" class="w-full accent-blue-600" oninput="syncSliderToInput('p1_init_num', this.value); updatePhase1();">
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-medium text-slate-600">Annual Contribution:</label>
+                        <input type="number" id="p1_contrib_annual_num" value="0" min="0" max="1200000" step="1000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncAnnualContribution(this.value)">
+                    </div>
+                    <input type="range" id="p1_contrib_annual" min="0" max="100000" step="5000" value="0" class="w-full accent-blue-600" oninput="syncAnnualContributionFromSlider(this.value)">
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-medium text-slate-600">Monthly Contribution:</label>
+                        <input type="number" id="p1_contrib_monthly_num" value="0" min="0" max="100000" step="100" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncMonthlyContribution(this.value)">
+                    </div>
+                    <input type="range" id="p1_contrib_monthly" min="0" max="10000" step="500" value="0" class="w-full accent-blue-600" oninput="syncMonthlyContributionFromSlider(this.value)">
+                </div>
+
+                <div>
+                    <label class="text-xs font-medium text-slate-600 block">Expected Average Annual Growth Rate (%): <span id="p1_rate_val" class="font-bold text-slate-900"></span></label>
+                    <input type="range" id="p1_rate" min="0" max="20" step="0.5" value="8.0" class="w-full accent-blue-600" oninput="updatePhase1()">
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 bg-blue-50/50 p-4 rounded-xl">
+                    <p class="text-xs text-blue-800 font-medium">Projected Nest Egg at Retirement:</p>
+                    <p id="p1_result" class="text-xl font-bold text-blue-900 mt-1"></p>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 flex items-center">
+                <div class="w-full h-80">
+                    <canvas id="chartPhase1"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="space-y-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-800 mb-2">Phase 2: Drawdown & Pension</h2>
+                        <button onclick="toggleStressTest()" id="stressBtn" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-xl shadow-sm transition">
+                            Enable Crash & Rebound Test
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-medium text-slate-600">Starting Nest Egg:</label>
+                            <input type="number" id="p2_init_num" value="2140000" min="0" max="50000000" step="10000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncInputToSlider('p2_init', this.value); updateStartingNestEggDefaults();">
+                        </div>
+                        <input type="range" id="p2_init" min="0" max="10000000" step="10000" value="2140000" class="w-full accent-emerald-600" oninput="syncSliderToInput('p2_init_num', this.value); updateStartingNestEggDefaults(); updatePhase2();">
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 block mb-1">Ending Age:</label>
+                        <input type="number" id="p2_end_age" value="90" min="65" max="110" step="0.25" class="w-full text-xs p-2 border border-slate-300 rounded-xl font-bold text-slate-900" oninput="updatePhase2()">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-medium text-slate-600">Target Gross Withdrawal (Today's $):</label>
+                            <input type="number" id="p2_spend_num" value="107000" min="0" max="1000000" step="1000" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncInputToSlider('p2_spend', this.value)">
+                        </div>
+                        <input type="range" id="p2_spend" min="0" max="250000" step="1000" value="107000" class="w-full accent-emerald-600" oninput="syncSliderToInput('p2_spend_num', this.value); updatePhase2();">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 block">Expected Portfolio Return in Retirement (%): <span id="p2_rate_val" class="font-bold text-slate-900"></span></label>
+                        <input type="range" id="p2_rate" min="0" max="20" step="0.5" value="5.0" class="w-full accent-emerald-600" oninput="updatePhase2()">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 block">Inflation Rate (%): <span id="p2_inf_val" class="font-bold text-slate-900"></span></label>
+                        <input type="range" id="p2_inf" min="0" max="8" step="0.1" value="2.5" class="w-full accent-emerald-600" oninput="updatePhase2()">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 block">Social Security Pensions (CPP/OAS): <span id="p2_pens_val" class="font-bold text-slate-900"></span></label>
+                        <input type="range" id="p2_pens" min="0" max="60000" step="1000" value="0" class="w-full accent-emerald-600" oninput="updatePhase2()">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 block">Years to Delay Social Security Pensions (General): <span id="p2_delay_val" class="font-bold text-slate-900"></span></label>
+                        <input type="range" id="p2_delay" min="0" max="10" step="0.5" value="0" class="w-full accent-emerald-600" oninput="updatePhase2()">
+                    </div>
+
+                    <!-- Employee Pension Section -->
+                    <div class="pt-3 border-t border-slate-100 space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase">Employee Pension</h3>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-medium text-slate-600">Monthly Pension Amount:</label>
+                                <input type="number" id="emp_pens_monthly_num" value="0" min="0" max="20000" step="100" class="w-28 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" oninput="syncEmpPensionMonthly(this.value)">
+                            </div>
+                            <input type="range" id="emp_pens_monthly" min="0" max="10000" step="250" value="0" class="w-full accent-emerald-600" oninput="syncEmpPensionMonthlyFromSlider(this.value)">
+                        </div>
+                        <div class="flex items-center gap-2 pt-1">
+                            <input type="checkbox" id="emp_pens_indexed" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500" onchange="updatePhase2()">
+                            <label for="emp_pens_indexed" class="text-xs font-medium text-slate-700 cursor-pointer">Index Employee Pension to Inflation</label>
+                        </div>
+                    </div>
+
+                    <div id="crashConfigContainer" class="hidden space-y-3 pt-3 border-t border-slate-100 bg-amber-50/50 p-3 rounded-xl border border-amber-200">
+                        <h3 class="text-xs font-bold text-amber-900 uppercase">Custom Crash & Rebound Settings</h3>
+                        <div>
+                            <label class="text-xs font-medium text-amber-800 block mb-1">Crash Start (Years into Retirement):</label>
+                            <input type="number" id="crashStart" value="0" min="0" max="40" step="1" class="w-full text-xs p-2 border border-amber-300 rounded-lg font-bold text-amber-900 bg-white" oninput="updatePhase2()">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-amber-800 block mb-1">Crash / Event Duration (Years):</label>
+                            <input type="number" id="crashDuration" value="3" min="1" max="8" step="1" class="w-full text-xs p-2 border border-amber-300 rounded-lg font-bold text-amber-900 bg-white" oninput="renderCrashYearInputs(); updatePhase2();">
+                        </div>
+                        <div id="crashYearsContainer" class="space-y-2 pt-1">
+                            <!-- Dynamic yearly return inputs injected here -->
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 bg-emerald-50/50 p-4 rounded-xl">
+                        <p class="text-xs text-emerald-800 font-medium">Final Portfolio Value at Ending Age:</p>
+                        <p id="p2_final_balance" class="text-xl font-bold text-emerald-900 mt-1"></p>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 flex items-center">
+                    <div class="w-full h-80">
+                        <canvas id="chartPhase2"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-6 border-t border-slate-200 space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <h3 class="text-md font-semibold text-slate-800">Year-by-Year Retirement Ledger</h3>
+                        <p class="text-xs text-slate-500">Track portfolio growth, net withdrawals, taxes, and after-tax cash flows across your timeline.</p>
+                    </div>
+                    <div class="w-full sm:w-64">
+                        <label class="text-xs font-medium text-slate-700 block mb-1">Expected Effective Tax Rate: <span id="ledger_tax_val" class="font-bold text-slate-900">20%</span></label>
+                        <input type="range" id="ledger_tax" min="0" max="40" step="1" value="20" class="w-full accent-emerald-600" oninput="updatePhase2()">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto max-h-96 border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-100 sticky top-0 text-slate-700 font-semibold uppercase">
+                            <tr>
+                                <th class="p-3 border-b">Age</th>
+                                <th class="p-3 border-b">Starting Balance</th>
+                                <th class="p-3 border-b">Portfolio Growth</th>
+                                <th class="p-3 border-b">Gross Withdrawal</th>
+                                <th class="p-3 border-b">Taxes Owed</th>
+                                <th class="p-3 border-b">Ending Balance</th>
+                                <th class="p-3 border-b">Net Annual Spend</th>
+                                <th class="p-3 border-b">After-Tax Monthly Spend</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledger_body" class="divide-y divide-slate-100 bg-white text-slate-700">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const fmtCurrency = (val) => '$' + Math.round(val).toLocaleString();
+
+        let chart1, chart2;
+        let isStressTestActive = false;
+
+        function syncInputToSlider(sliderId, val) {
+            const slider = document.getElementById(sliderId);
+            if (slider) {
+                if (parseFloat(val) > parseFloat(slider.max)) {
+                    slider.max = parseFloat(val) * 2;
+                }
+                slider.value = val;
+                if (sliderId === 'p1_init') updatePhase1();
+                if (sliderId === 'p2_init') {
+                    updateStartingNestEggDefaults();
+                    updatePhase2();
+                }
+                if (sliderId === 'p2_spend') updatePhase2();
+            }
+        }
+
+        function syncSliderToInput(numInputId, val) {
+            const numInput = document.getElementById(numInputId);
+            if (numInput) {
+                numInput.value = val;
+            }
+        }
+
+        function updateStartingNestEggDefaults() {
+            const initNum = document.getElementById('p2_init_num');
+            const initialVal = parseFloat(initNum.value) || 0;
+            const targetSpend = Math.round(initialVal * 0.05);
+
+            const spendNum = document.getElementById('p2_spend_num');
+            const spendSlider = document.getElementById('p2_spend');
+            if (spendNum) spendNum.value = targetSpend;
+            if (spendSlider) {
+                if (targetSpend > parseFloat(spendSlider.max)) {
+                    spendSlider.max = targetSpend * 2;
+                }
+                spendSlider.value = targetSpend;
+            }
+        }
+
+        function syncAnnualContribution(val) {
+            const annual = parseFloat(val) || 0;
+            const monthly = Math.round(annual / 12);
+
+            const annualSlider = document.getElementById('p1_contrib_annual');
+            if (annualSlider) {
+                if (annual > parseFloat(annualSlider.max)) annualSlider.max = annual * 2;
+                annualSlider.value = annual;
+            }
+
+            const monthlyNum = document.getElementById('p1_contrib_monthly_num');
+            const monthlySlider = document.getElementById('p1_contrib_monthly');
+            if (monthlyNum) monthlyNum.value = monthly;
+            if (monthlySlider) {
+                if (monthly > parseFloat(monthlySlider.max)) monthlySlider.max = monthly * 2;
+                monthlySlider.value = monthly;
+            }
+            updatePhase1();
+        }
+
+        function syncAnnualContributionFromSlider(val) {
+            syncSliderToInput('p1_contrib_annual_num', val);
+            syncAnnualContribution(val);
+        }
+
+        function syncMonthlyContribution(val) {
+            const monthly = parseFloat(val) || 0;
+            const annual = Math.round(monthly * 12);
+
+            const monthlySlider = document.getElementById('p1_contrib_monthly');
+            if (monthlySlider) {
+                if (monthly > parseFloat(monthlySlider.max)) monthlySlider.max = monthly * 2;
+                monthlySlider.value = monthly;
+            }
+
+            const annualNum = document.getElementById('p1_contrib_annual_num');
+            const annualSlider = document.getElementById('p1_contrib_annual');
+            if (annualNum) annualNum.value = annual;
+            if (annualSlider) {
+                if (annual > parseFloat(annualSlider.max)) annualSlider.max = annual * 2;
+                annualSlider.value = annual;
+            }
+            updatePhase1();
+        }
+
+        function syncMonthlyContributionFromSlider(val) {
+            syncSliderToInput('p1_contrib_monthly_num', val);
+            syncMonthlyContribution(val);
+        }
+
+        function syncEmpPensionMonthly(val) {
+            const monthly = parseFloat(val) || 0;
+            const slider = document.getElementById('emp_pens_monthly');
+            if (slider) {
+                if (monthly > parseFloat(slider.max)) slider.max = monthly * 2;
+                slider.value = monthly;
+            }
+            updatePhase2();
+        }
+
+        function syncEmpPensionMonthlyFromSlider(val) {
+            syncSliderToInput('emp_pens_monthly_num', val);
+            syncEmpPensionMonthly(val);
+        }
+
+        function renderCrashYearInputs() {
+            const container = document.getElementById('crashYearsContainer');
+            if (!container) return;
+            
+            const duration = parseInt(document.getElementById('crashDuration').value) || 3;
+            const defaultValues = [-15, -10, 25, 10, 10, 10, 10, 10];
+            
+            const currentValues = [];
+            for (let j = 0; j < container.children.length; j++) {
+                const input = container.children[j].querySelector('input');
+                if (input) currentValues.push(input.value);
+            }
+            
+            let html = '<label class="text-xs font-medium text-amber-800 block">Return (%) for Each Event Year:</label>';
+            for (let i = 0; i < duration; i++) {
+                let val = currentValues[i] !== undefined ? currentValues[i] : (defaultValues[i] !== undefined ? defaultValues[i] : 0);
+                html += `
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-amber-900 font-medium w-16">Year ${i + 1}:</span>
+                        <input type="number" id="crash_year_${i}" value="${val}" step="1" class="w-full text-xs p-1.5 border border-amber-300 rounded-lg font-bold text-amber-900 bg-white" oninput="updatePhase2()">
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function initCharts() {
+            renderCrashYearInputs();
+            updateStartingNestEggDefaults();
+
+            const ctx1 = document.getElementById('chartPhase1').getContext('2d');
+            chart1 = new Chart(ctx1, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Projected Nest Egg', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.1 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+
+            const ctx2 = document.getElementById('chartPhase2').getContext('2d');
+            chart2 = new Chart(ctx2, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Remaining Balance (Nominal $)', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.1 }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        y: { 
+                            beginAtZero: true
+                        } 
+                    } 
+                }
+            });
+
+            updatePhase1();
+        }
+
+        function toggleStressTest() {
+            isStressTestActive = !isStressTestActive;
+            const btn = document.getElementById('stressBtn');
+            const configBox = document.getElementById('crashConfigContainer');
+            if (isStressTestActive) {
+                btn.className = "w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm transition";
+                btn.innerText = "Crash & Rebound Active";
+                configBox.classList.remove('hidden');
+            } else {
+                btn.className = "w-full py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-xl shadow-sm transition";
+                btn.innerText = "Enable Crash & Rebound Test";
+                configBox.classList.add('hidden');
+            }
+            updatePhase2();
+        }
+
+        function updatePhase1() {
+            const currentAge = parseFloat(document.getElementById('p1_current_age').value) || 18;
+            const retireAge = parseFloat(document.getElementById('p1_retire_age').value) || 65;
+            const totalYears = Math.max(0.1, retireAge - currentAge);
+
+            const numInput = document.getElementById('p1_init_num');
+            const initial = parseFloat(numInput.value) || 0;
+            syncSliderToInput('p1_init', initial);
+
+            const annualContrib = parseFloat(document.getElementById('p1_contrib_annual_num').value) || 0;
+            const rate = parseFloat(document.getElementById('p1_rate').value) / 100;
+
+            document.getElementById('p1_rate_val').innerText = (rate * 100).toFixed(1) + '%';
+
+            const labels = [];
+            const data = [];
+            const periodsPerYear = 52;
+            const weeklyRate = rate / periodsPerYear;
+            const weeklyContrib = annualContrib / periodsPerYear;
+            
+            const steps = Math.ceil(totalYears);
+            for (let i = 0; i <= steps; i++) {
+                let currentStepYears = Math.min(totalYears, i);
+                let ageLabel = (currentAge + currentStepYears).toFixed(2).replace(/\.?0+$/, '');
+                labels.push('Age ' + ageLabel);
+
+                let balance;
+                const totalPeriods = currentStepYears * periodsPerYear;
+                if (rate > 0) {
+                    balance = initial * Math.pow(1 + weeklyRate, totalPeriods) + 
+                              weeklyContrib * ((Math.pow(1 + weeklyRate, totalPeriods) - 1) / weeklyRate);
+                } else {
+                    balance = initial + annualContrib * currentStepYears;
+                }
+                data.push(Math.round(balance));
+            }
+
+            const finalBalance = data[data.length - 1];
+            document.getElementById('p1_result').innerText = fmtCurrency(finalBalance);
+            
+            if(document.activeElement.id !== 'p2_init' && document.activeElement.id !== 'p2_init_num') {
+                document.getElementById('p2_init').value = finalBalance;
+                document.getElementById('p2_init_num').value = finalBalance;
+                const p2Slider = document.getElementById('p2_init');
+                if (finalBalance > parseFloat(p2Slider.max)) {
+                    p2Slider.max = finalBalance * 2;
+                }
+                updateStartingNestEggDefaults();
+            }
+            
+            chart1.data.labels = labels;
+            chart1.data.datasets[0].data = data;
+            chart1.update();
+
+            updatePhase2();
+        }
+
+        function updatePhase2() {
+            const retireAge = parseFloat(document.getElementById('p1_retire_age').value) || 65;
+            const endAge = parseFloat(document.getElementById('p2_end_age').value) || 90;
+            const totalRetireYears = Math.max(0.1, endAge - retireAge);
+
+            const numInput = document.getElementById('p2_init_num');
+            const initial = parseFloat(numInput.value) || 0;
+            syncSliderToInput('p2_init', initial);
+
+            const spendNumInput = document.getElementById('p2_spend_num');
+            const baseGrossWithdrawal = parseFloat(spendNumInput.value) || 0;
+            syncSliderToInput('p2_spend', baseGrossWithdrawal);
+
+            const taxRate = parseFloat(document.getElementById('ledger_tax').value) / 100;
+            const rate = parseFloat(document.getElementById('p2_rate').value) / 100;
+            const inflation = parseFloat(document.getElementById('p2_inf').value) / 100;
+            
+            const socSecPension = parseFloat(document.getElementById('p2_pens').value);
+            const socSecDelay = parseFloat(document.getElementById('p2_delay').value);
+
+            const empPensMonthly = parseFloat(document.getElementById('emp_pens_monthly_num').value) || 0;
+            const empPensAnnualBase = empPensMonthly * 12;
+            const isEmpPensIndexed = document.getElementById('emp_pens_indexed').checked;
+            
+            const crashStart = parseFloat(document.getElementById('crashStart').value) || 0;
+            const crashDurationVal = parseInt(document.getElementById('crashDuration').value) || 3;
+
+            document.getElementById('ledger_tax_val').innerText = (taxRate * 100).toFixed(0) + '%';
+            document.getElementById('p2_rate_val').innerText = (rate * 100).toFixed(1) + '%';
+            document.getElementById('p2_inf_val').innerText = (inflation * 100).toFixed(1) + '%';
+            document.getElementById('p2_pens_val').innerText = fmtCurrency(socSecPension);
+            document.getElementById('p2_delay_val').innerText = socSecDelay + ' yrs';
+
+            const labels = [];
+            const data = [];
+            const ledgerRows = [];
+            let balance = initial;
+
+            const steps = Math.ceil(totalRetireYears);
+            for (let i = 0; i <= steps; i++) {
+                let t = Math.min(totalRetireYears, i);
+                let ageVal = (retireAge + t).toFixed(2).replace(/\.?0+$/, '');
+                labels.push('Age ' + ageVal);
+                
+                let startBalance = balance;
+                if (startBalance < 0) startBalance = 0;
+
+                let targetGross = baseGrossWithdrawal * Math.pow(1 + inflation, t);
+                
+                let activeSocSec = (t >= socSecDelay) ? socSecPension * Math.pow(1 + inflation, t - socSecDelay) : 0;
+                let activeEmpPens = isEmpPensIndexed ? empPensAnnualBase * Math.pow(1 + inflation, t) : empPensAnnualBase;
+                let totalCombinedPension = activeSocSec + activeEmpPens;
+
+                let grossWithdrawalFromPortfolio = Math.max(0, targetGross - totalCombinedPension);
+                
+                let currentReturn = rate;
+                let marketNote = "";
+                if (isStressTestActive) {
+                    let crashOffset = t - crashStart;
+                    if (crashOffset >= 0 && crashOffset < crashDurationVal) {
+                        const yearInput = document.getElementById(`crash_year_${crashOffset}`);
+                        let customReturnPct = yearInput ? (parseFloat(yearInput.value) || 0) : 0;
+                        currentReturn = customReturnPct / 100;
+                        marketNote = ` <span class="text-red-600 font-bold">(Crash Y${crashOffset + 1}: ${customReturnPct >= 0 ? '+' : ''}${customReturnPct}%)</span>`;
+                    }
+                }
+
+                let portfolioGrowth = startBalance * currentReturn;
+                let taxesOwed = grossWithdrawalFromPortfolio * taxRate;
+                let netSpendFromPortfolio = grossWithdrawalFromPortfolio - taxesOwed;
+                let totalAfterTaxAnnualSpend = netSpendFromPortfolio + totalCombinedPension;
+                let afterTaxMonthlySpend = totalAfterTaxAnnualSpend / 12;
+
+                let endBalance = Math.max(0, startBalance + portfolioGrowth - grossWithdrawalFromPortfolio);
+
+                data.push(Math.round(startBalance));
+
+                let pensionNote = totalCombinedPension > 0 ? `<span class="text-slate-400 text-[10px]">(Pension offset)</span>` : '';
+
+                ledgerRows.push(`
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-medium">Age ${ageVal} ${marketNote}</td>
+                        <td class="p-3">${fmtCurrency(startBalance)}</td>
+                        <td class="p-3 text-blue-600 font-medium">+${fmtCurrency(portfolioGrowth)}</td>
+                        <td class="p-3">${fmtCurrency(grossWithdrawalFromPortfolio)} ${pensionNote}</td>
+                        <td class="p-3 text-red-600 font-medium">${fmtCurrency(taxesOwed)}</td>
+                        <td class="p-3 font-semibold">${fmtCurrency(endBalance)}</td>
+                        <td class="p-3 text-emerald-700 font-semibold">${fmtCurrency(totalAfterTaxAnnualSpend)}</td>
+                        <td class="p-3 text-emerald-700 font-semibold">${fmtCurrency(afterTaxMonthlySpend)}/mo</td>
+                    </tr>
+                `);
+
+                balance = endBalance;
+            }
+
+            document.getElementById('p2_final_balance').innerText = fmtCurrency(balance);
+            document.getElementById('ledger_body').innerHTML = ledgerRows.join('');
+
+            chart2.data.labels = labels;
+            chart2.data.datasets[0].data = data;
+            chart2.update();
+        }
+
+        window.onload = initCharts;
+    </script>
+</body>
+</html>
