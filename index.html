@@ -155,9 +155,9 @@
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-xs font-medium text-slate-600">Social Security Pensions (Annual):</label>
-                            <input type="text" id="p2_pens_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncTextToSliderAndModel('p2_pens', this.value, updatePhase2)">
+                            <input type="text" id="p2_pens_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncTextToSliderAndModel('p2_pens', this.value, () => { autoCalculateTaxRate(); updatePhase2(); })">
                         </div>
-                        <input type="range" id="p2_pens" min="0" max="60000" step="1000" value="0" class="w-full accent-emerald-600" oninput="syncSliderToText('p2_pens_num', this.value); updatePhase2();">
+                        <input type="range" id="p2_pens" min="0" max="60000" step="1000" value="0" class="w-full accent-emerald-600" oninput="syncSliderToText('p2_pens_num', this.value); autoCalculateTaxRate(); updatePhase2();">
                     </div>
                     <div>
                         <label class="text-xs font-medium text-slate-600 block">Years to Delay Social Security Pensions (General): <span id="p2_delay_val" class="font-bold text-slate-900"></span></label>
@@ -304,19 +304,21 @@
         }
 
         function autoCalculateTaxRate() {
-            if (userChangedTax) return; // Respect manual user adjustment if they've changed it
+            if (userChangedTax) return; 
             
             const spend = parseCurrencyString(document.getElementById('p2_spend_num').value);
+            const socSec = parseCurrencyString(document.getElementById('p2_pens_num').value);
+            const empPens = parseCurrencyString(document.getElementById('emp_pens_monthly_num').value) * 12;
+            const totalTargetIncome = spend + socSec + empPens;
+
             let taxPct = 0;
 
-            if (spend <= 0) {
+            if (totalTargetIncome <= 0) {
                 taxPct = 0;
-            } else if (spend <= 300000) {
-                // Rises linearly from 0% at $0 to 45% at $300,000[cite: 1]
-                taxPct = (spend / 300000) * 45;
+            } else if (totalTargetIncome <= 300000) {
+                taxPct = (totalTargetIncome / 300000) * 45;
             } else {
-                // Beyond $300,000, gently scale up toward 70% cap
-                const extraProgress = (spend - 300000) / 100000;
+                const extraProgress = (totalTargetIncome - 300000) / 100000;
                 taxPct = Math.min(70, 45 + (extraProgress * 15));
             }
 
@@ -362,7 +364,7 @@
             if (pctInput && document.activeElement !== pctInput) {
                 pctInput.value = '5.0%';
             }
-            userChangedTax = false; // Reset manual lock when nest egg defaults reset
+            userChangedTax = false;
             autoCalculateTaxRate();
         }
 
@@ -426,6 +428,7 @@
                 if (monthly > parseFloat(slider.max)) slider.max = monthly * 2;
                 slider.value = monthly;
             }
+            autoCalculateTaxRate();
             updatePhase2();
         }
 
@@ -656,7 +659,7 @@
 
                 data.push(Math.round(startBalance));
 
-                let pensionNote = totalCombinedPension > 0 ? `<span class="text-slate-400 text-[10px]">(Pension offset)</span>` : '';
+                let pensionNote = totalCombinedPension > 0 ? `<span class="text-slate-400 text-[10px]">(Pension income included)</span>` : '';
 
                 ledgerRows.push(`
                     <tr class="hover:bg-slate-50">
