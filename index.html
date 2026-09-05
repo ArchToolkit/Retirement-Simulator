@@ -137,9 +137,12 @@
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-xs font-medium text-slate-600">Target Gross Annual Withdrawal (Today's $):</label>
-                            <input type="text" id="p2_spend_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncTextToSliderAndModel('p2_spend', this.value, updatePhase2)">
+                            <div class="flex items-center gap-1">
+                                <input type="text" id="p2_spend_pct_num" value="5.0%" title="Withdrawal Rate %" class="w-16 text-xs p-1 border border-slate-300 rounded-lg font-bold text-emerald-700 text-center" oninput="syncSpendFromPercentage(this.value)">
+                                <input type="text" id="p2_spend_num" value="$0" class="w-28 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncTextToSliderAndModel('p2_spend', this.value, () => { updateSpendPercentageDisplay(); autoCalculateTaxRate(); updatePhase2(); })">
+                            </div>
                         </div>
-                        <input type="range" id="p2_spend" min="0" max="250000" step="1000" value="0" class="w-full accent-emerald-600" oninput="syncSliderToText('p2_spend_num', this.value); updatePhase2();">
+                        <input type="range" id="p2_spend" min="0" max="250000" step="1000" value="0" class="w-full accent-emerald-600" oninput="syncSliderToText('p2_spend_num', this.value); updateSpendPercentageDisplay(); autoCalculateTaxRate(); updatePhase2();">
                     </div>
                     <div>
                         <label class="text-xs font-medium text-slate-600 block">Expected Portfolio Return in Retirement (%): <span id="p2_rate_val" class="font-bold text-slate-900"></span></label>
@@ -150,8 +153,11 @@
                         <input type="range" id="p2_inf" min="0" max="8" step="0.1" value="2.5" class="w-full accent-emerald-600" oninput="updatePhase2()">
                     </div>
                     <div>
-                        <label class="text-xs font-medium text-slate-600 block">Social Security Pensions (CPP/OAS): <span id="p2_pens_val" class="font-bold text-slate-900"></span></label>
-                        <input type="range" id="p2_pens" min="0" max="60000" step="1000" value="0" class="w-full accent-emerald-600" oninput="updatePhase2()">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-medium text-slate-600">Social Security Pensions (Annual):</label>
+                            <input type="text" id="p2_pens_num" value="$0" class="w-32 text-xs p-1 border border-slate-300 rounded-lg font-bold text-slate-900 text-right" onfocus="unformatCurrencyInput(this)" onblur="formatCurrencyInput(this)" oninput="syncTextToSliderAndModel('p2_pens', this.value, updatePhase2)">
+                        </div>
+                        <input type="range" id="p2_pens" min="0" max="60000" step="1000" value="0" class="w-full accent-emerald-600" oninput="syncSliderToText('p2_pens_num', this.value); updatePhase2();">
                     </div>
                     <div>
                         <label class="text-xs font-medium text-slate-600 block">Years to Delay Social Security Pensions (General): <span id="p2_delay_val" class="font-bold text-slate-900"></span></label>
@@ -213,8 +219,12 @@
                         <p class="text-xs text-slate-500">Detailed breakdown of your annual spending, net portfolio withdrawals, taxes, and after-tax cash flows across your timeline.</p>
                     </div>
                     <div class="w-full sm:w-64">
-                        <label class="text-xs font-medium text-slate-700 block mb-1">Expected Effective Tax Rate: <span id="ledger_tax_val" class="font-bold text-slate-900">20%</span></label>
-                        <input type="range" id="ledger_tax" min="0" max="40" step="1" value="20" class="w-full accent-emerald-600" oninput="updatePhase2()">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-medium text-slate-700">Expected Effective Tax Rate:</label>
+                            <button onclick="userChangedTax = false; autoCalculateTaxRate(); updatePhase2();" class="text-[10px] text-blue-600 hover:underline font-semibold" title="Reset tax rate to automatic formula">Auto-Match</button>
+                        </div>
+                        <span id="ledger_tax_val" class="font-bold text-slate-900 text-xs block mb-1">20%</span>
+                        <input type="range" id="ledger_tax" min="0" max="70" step="1" value="20" class="w-full accent-emerald-600" oninput="userChangedTax = true; updatePhase2();">
                     </div>
                 </div>
 
@@ -262,6 +272,7 @@
 
         let chart1, chart2;
         let isStressTestActive = false;
+        let userChangedTax = false;
 
         function syncTextToSliderAndModel(sliderId, valStr, updateCallback) {
             const val = parseCurrencyString(valStr);
@@ -282,13 +293,63 @@
             }
         }
 
-        function updateStartingNestEggDefaults() {
-            const initNum = document.getElementById('p2_init_num');
-            const initialVal = parseCurrencyString(initNum.value);
-            const targetSpend = Math.round(initialVal * 0.05);
+        function updateSpendPercentageDisplay() {
+            const initNum = parseCurrencyString(document.getElementById('p2_init_num').value);
+            const spendNum = parseCurrencyString(document.getElementById('p2_spend_num').value);
+            const pctInput = document.getElementById('p2_spend_pct_num');
+            if (initNum > 0 && pctInput && document.activeElement !== pctInput) {
+                const pct = (spendNum / initNum) * 100;
+                pctInput.value = pct.toFixed(1) + '%';
+            }
+        }
+
+        function autoCalculateTaxRate() {
+            if (userChangedTax) return; // Respect manual user adjustment if they've changed it
+            
+            const spend = parseCurrencyString(document.getElementById('p2_spend_num').value);
+            let taxPct = 0;
+
+            if (spend <= 0) {
+                taxPct = 0;
+            } else if (spend <= 300000) {
+                // Rises linearly from 0% at $0 to 45% at $300,000[cite: 1]
+                taxPct = (spend / 300000) * 45;
+            } else {
+                // Beyond $300,000, gently scale up toward 70% cap
+                const extraProgress = (spend - 300000) / 100000;
+                taxPct = Math.min(70, 45 + (extraProgress * 15));
+            }
+
+            const taxSlider = document.getElementById('ledger_tax');
+            if (taxSlider) {
+                taxSlider.value = Math.round(taxPct);
+            }
+        }
+
+        function syncSpendFromPercentage(pctStr) {
+            const pct = parseFloat(pctStr.replace(/[^0-9.-]+/g, "")) || 0;
+            const initNum = parseCurrencyString(document.getElementById('p2_init_num').value);
+            const targetSpend = Math.round(initNum * (pct / 100));
 
             const spendNum = document.getElementById('p2_spend_num');
             const spendSlider = document.getElementById('p2_spend');
+            if (spendNum) spendNum.value = '$' + targetSpend.toLocaleString();
+            if (spendSlider) {
+                if (targetSpend > parseFloat(spendSlider.max)) spendSlider.max = targetSpend * 2;
+                spendSlider.value = targetSpend;
+            }
+            autoCalculateTaxRate();
+            updatePhase2();
+        }
+
+        function updateStartingNestEggDefaults() {
+            const initNum = parseCurrencyString(document.getElementById('p2_init_num').value);
+            const targetSpend = Math.round(initNum * 0.05);
+
+            const spendNum = document.getElementById('p2_spend_num');
+            const spendSlider = document.getElementById('p2_spend');
+            const pctInput = document.getElementById('p2_spend_pct_num');
+            
             if (spendNum && document.activeElement !== spendNum) {
                 spendNum.value = '$' + Math.round(targetSpend).toLocaleString();
             }
@@ -298,6 +359,11 @@
                 }
                 spendSlider.value = targetSpend;
             }
+            if (pctInput && document.activeElement !== pctInput) {
+                pctInput.value = '5.0%';
+            }
+            userChangedTax = false; // Reset manual lock when nest egg defaults reset
+            autoCalculateTaxRate();
         }
 
         function syncAnnualContribution(annual) {
@@ -402,6 +468,7 @@
             
             document.getElementById('p1_init').value = parseCurrencyString(document.getElementById('p1_init_num').value);
             document.getElementById('p2_init').value = parseCurrencyString(document.getElementById('p2_init_num').value);
+            document.getElementById('p2_pens').value = parseCurrencyString(document.getElementById('p2_pens_num').value);
 
             updateStartingNestEggDefaults();
 
@@ -514,12 +581,18 @@
 
             const baseGrossWithdrawal = parseCurrencyString(document.getElementById('p2_spend_num').value);
             document.getElementById('p2_spend').value = baseGrossWithdrawal;
+            updateSpendPercentageDisplay();
+
+            if (!userChangedTax) {
+                autoCalculateTaxRate();
+            }
 
             const taxRate = parseFloat(document.getElementById('ledger_tax').value) / 100;
             const rate = parseFloat(document.getElementById('p2_rate').value) / 100;
             const inflation = parseFloat(document.getElementById('p2_inf').value) / 100;
             
-            const socSecPension = parseFloat(document.getElementById('p2_pens').value);
+            const socSecPension = parseCurrencyString(document.getElementById('p2_pens_num').value);
+            document.getElementById('p2_pens').value = socSecPension;
             const socSecDelay = parseFloat(document.getElementById('p2_delay').value);
 
             const empPensMonthly = parseCurrencyString(document.getElementById('emp_pens_monthly_num').value);
@@ -532,7 +605,6 @@
             document.getElementById('ledger_tax_val').innerText = (taxRate * 100).toFixed(0) + '%';
             document.getElementById('p2_rate_val').innerText = (rate * 100).toFixed(1) + '%';
             document.getElementById('p2_inf_val').innerText = (inflation * 100).toFixed(1) + '%';
-            document.getElementById('p2_pens_val').innerText = fmtCurrency(socSecPension);
             document.getElementById('p2_delay_val').innerText = socSecDelay + ' yrs';
 
             const labels = [];
