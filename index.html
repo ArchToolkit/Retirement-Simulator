@@ -6,12 +6,49 @@
     <title>Flexible Two-Phase Retirement Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @page {
+            size: portrait;
+            margin: 10mm;
+        }
+        @media print {
+            body {
+                background-color: white !important;
+                color: black !important;
+                padding: 0 !important;
+            }
+            button, input[type="range"], .no-print {
+                display: none !important;
+            }
+            .max-w-6xl {
+                max-width: 100% !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+            }
+            header, section {
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                margin-bottom: 1.5rem !important;
+                page-break-inside: avoid;
+            }
+            .overflow-x-auto {
+                max-height: none !important;
+                overflow: visible !important;
+            }
+        }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans p-6">
 
     <div class="max-w-6xl mx-auto space-y-8">
-        <header class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <header class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 class="text-2xl font-bold text-slate-900">Flexible Two-Phase Retirement Trajectory Simulator</h1>
+            <button onclick="window.print()" class="no-print flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-sm transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print / Save PDF
+            </button>
         </header>
 
         <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -534,7 +571,6 @@
 
                 let portfolioGrowth = startBalance * currentReturn;
                 
-                // Effective tax rate now applies to total taxable income (both portfolio withdrawals and pensions)
                 let totalTaxableIncome = grossWithdrawalFromPortfolio + totalCombinedPension;
                 let taxesOwed = totalTaxableIncome * taxRate;
                 
